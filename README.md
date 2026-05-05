@@ -1,14 +1,20 @@
 # Atmoph Window Yo — Local BLE Control
 
 Local, cloud-free control of the [Atmoph Window Yo](https://atmoph.com/)
-digital window over Bluetooth Low Energy. No app, no cloud, no internet.
+digital window over Bluetooth Low Energy. No app, no cloud, no internet, 
+just enjoy quiet Window Yo when you are away.
 
 The new Atmoph Window Yo no longer supports IFTTT or any other third-party
 integration, and Atmoph does not publish a local API or document their BLE
 protocol. This project is the result of analyzing the BLE communication
 between the official app and the device, and provides a small Python script
-to turn the window on/off idempotently — making it the only known way to
-integrate the Window Yo with home automation systems such as Home Assistant.
+to turn the window on/off idempotently — making it an easy way to integrate
+the Window Yo with home automation systems such as Home Assistant, Openhab 
+or any other (being able to run local python scripts).
+
+To put it simple - I wanted to put 'the windows' to sleep while no one is
+at home (in my case when the alarm is armed - covering anything from 
+vacations to daily leave for work). 
 
 ## Methodology — what was and wasn't done
 
@@ -31,6 +37,8 @@ observation of communication on hardware the user owns.
 ## What works
 
 - Discovers the window by advertised name (handles BLE MAC rotation)
+  NOTE - you need to provide the unique part of your Window Yo advertisement
+  (usually a number after "Atmoph Window Yo .." BLE name
 - Reads current power state (`on` / `off`)
 - Sets power state idempotently — only toggles if needed
 - Suitable for Home Assistant `shell_command` or `command_line` switch
@@ -39,19 +47,21 @@ observation of communication on hardware the user owns.
 
 - Volume, view selection, calendar/clock toggles, etc. The same observation
   technique would reveal those, but they aren't mapped here. PRs welcome.
+  For me it was just enough to switch it off while we are away to save enery
+  and money.
 
 ## Requirements
 
+- An Atmoph Window Yo (of course) within Bluetooth range
 - Linux with BlueZ 5.40+
 - Python 3.7+
 - [`bleak`](https://github.com/hbldh/bleak) (`pip install -r requirements.txt`)
-- An Atmoph Window Yo within Bluetooth range
 
 ## Usage
 
 Edit `atmoph_set.py` and change `NAME_FRAGMENT` to a unique substring of your
 window's advertised name (typically the 5-digit serial number visible in the
-official app — e.g. `"Atmoph Window Yo 86637"` → use `"86637"`).
+official app — e.g. `"Atmoph Window Yo 11223"` → use `"11223"`).
 
 ```bash
 python3 atmoph_set.py on        # wake the window
