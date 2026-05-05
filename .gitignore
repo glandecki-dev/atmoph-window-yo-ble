@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.log
+btsnoop_hci.log
+bugreport*.zip
+.idea/
+.vscode/
+.DS_Store
