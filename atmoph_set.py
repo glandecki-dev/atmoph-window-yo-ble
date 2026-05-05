@@ -22,7 +22,9 @@ from bleak.exc import BleakError
 
 # --- config ---------------------------------------------------------------
 # Unique substring of the window's advertised name (typically the serial).
-NAME_FRAGMENT = "86637"
+# CHANGE THIS TO YOUR ATMOPH WINDOW BLE advertisement 
+# For example for "Atmoph Window Yo 11223" it can be:
+NAME_FRAGMENT = "11223" 
 
 # Vendor characteristic that toggles the screen power. Writing 0x53 ('S')
 # flips state. Same byte for sleep and wake - read the state char first.

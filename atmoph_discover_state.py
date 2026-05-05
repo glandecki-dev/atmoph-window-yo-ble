@@ -22,7 +22,8 @@ from bleak import BleakClient, BleakScanner
 from bleak.exc import BleakError
 
 # --- config ---------------------------------------------------------------
-NAME_FRAGMENT = "86637"
+# Change NAME_FRAGMENT to your own Window Yo BLE advertisement
+NAME_FRAGMENT = "11223"
 TOGGLE_CHAR_UUID = "d4393824-471f-4799-ab74-28879878a4e7"
 TOGGLE_PAYLOAD = bytes([0x53])  # ASCII 'S' - toggles power
 
