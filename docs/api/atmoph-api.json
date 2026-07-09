@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Atmoph Window Yo — BLE API",
+  "version": "1.0.0",
+  "updated": "2026-07-09",
+  "description": "Observed BLE protocol for the Atmoph Window Yo digital window, obtained by passive analysis of BLE traffic between the official smartphone app and a device the user owns. No firmware or app was decompiled; no authentication was bypassed (the device exposes its BLE interface without authentication by design). Fields marked 'observed' are confirmed by capture. Fields marked 'inferred' are strong-but-unverified guesses.",
+
+  "device": {
+    "advertised_name_prefix": "Atmoph Window Yo ",
+    "advertised_name_pattern": "^Atmoph Window Yo (?P<serial>\\d+)$",
+    "notes": [
+      "BLE MAC address rotates. Discover by advertised-name substring (typically the 5-digit serial) rather than caching MAC.",
+      "No pairing or bonding is required. First-come-first-served single central connection.",
+      "The Atmoph smartphone app writes 'C' to the command register on connect. Third-party clients do not need to replicate this; it appears to be an app-level session hello."
+    ]
+  },
+
+  "services": {
+    "control": {
+      "uuid": "c1e0d952-12f7-4c84-b67d-fc26f55243a0",
+      "purpose": "Primary control and content service.",
+      "characteristics": {
+        "command": {
+          "uuid": "d4393824-471f-4799-ab74-28879878a4e7",
+          "properties": ["write"],
+          "encoding": "ASCII",
+          "purpose": "General-purpose command register. Accepts variable-length ASCII strings.",
+          "commands": {
+            "power_toggle": {
+              "payload_ascii": "S",
+              "payload_hex": "53",
+              "effect": "Toggles the display power (sleep <-> wake).",
+              "idempotent": false,
+              "note": "Always read `power_state` before writing to achieve idempotent on/off.",
+              "status": "observed"
+            },
+            "next_view": {
+              "payload_ascii": "FW",
+              "payload_hex": "46 57",
+              "effect": "Advance to the next view (Forward).",
+              "idempotent": false,
+              "status": "observed"
+            },
+            "prev_view": {
+              "payload_ascii": "BW",
+              "payload_hex": "42 57",
+              "effect": "Go to the previous view (Backward).",
+              "idempotent": false,
+              "status": "observed"
+            },
+            "app_session_hello": {
+              "payload_ascii": "C",
+              "payload_hex": "43",
+              "effect": "Sent by the official app on connect. Effect on third-party clients is unknown and appears optional.",
+              "status": "observed_optional"
+            }
+          },
+          "unmapped_bytes": {
+            "note": "The official app writes these bytes during in-app menu navigation (mirroring user taps). Their effect as standalone commands has not been mapped.",
+            "seen": ["M", "V", "R", "T", "B"]
+          }
+        },
+
+        "power_state": {
+          "uuid": "7607f5a4-22bc-4730-9019-c78dc8b50341",
+          "properties": ["read", "write", "notify"],
+          "encoding": "ASCII",
+          "value_type": "boolean_string",
+          "values": {
+            "on": "true",
+            "off": "false"
+          },
+          "purpose": "Current display power state. Subscribe to notify for realtime updates when the user toggles power via proximity sensor or the physical screen.",
+          "status": "observed"
+        },
+
+        "view_title": {
+          "uuid": "1d862803-b301-4548-bece-1f1ab61881b8",
+          "properties": ["read", "notify"],
+          "encoding": "UTF-8",
+          "value_type": "string",
+          "example": "Evening in Plaza de la Paz",
+          "purpose": "Human-readable title of the currently displayed view.",
+          "status": "observed"
+        },
+
+        "location": {
+          "uuid": "275ddae2-4c69-4638-97d4-d5ba8e9e05d1",
+          "properties": ["read", "notify"],
+          "encoding": "UTF-8",
+          "value_type": "string",
+          "example": "Guanajuato",
+          "purpose": "Human-readable location / city name of the currently displayed view.",
+          "status": "observed"
+        },
+
+        "thumbnail_url": {
+          "uuid": "99cd2547-0640-485c-9996-e0a2b384a6f2",
+          "properties": ["read", "notify"],
+          "encoding": "UTF-8",
+          "value_type": "url",
+          "example": "https://atmoph.com/thumbnails/LAT1_N1W2C3FL/fb7a2c47",
+          "purpose": "HTTPS URL to the current view's thumbnail image on atmoph.com. Useful for dashboards and image widgets.",
+          "status": "observed"
+        },
+
+        "view_id_full": {
+          "uuid": "03cffbfe-b23a-4c8f-bf57-9591b4d59119",
+          "properties": ["read", "notify"],
+          "encoding": "ASCII",
+          "value_type": "string",
+          "example": "LAT1_N1W2C3FL/fb7a2c47",
+          "purpose": "Internal view identifier with hash suffix. Useful as a stable machine-readable identifier of the current view.",
+          "status": "observed"
+        },
+
+        "view_id_bare": {
+          "uuid": "e9c45eb5-fa81-4760-9b1b-24d6cb1d562c",
+          "properties": ["read", "write", "notify"],
+          "encoding": "ASCII",
+          "value_type": "string",
+          "example": "LAT1_N1W2C3FL",
+          "purpose": "Bare internal view identifier (no hash). Write property suggests this may be used to select a specific view directly, but this has not been verified.",
+          "status": "observed_read_only_verified"
+        },
+
+        "device_uuid": {
+          "uuid": "e6f3269f-a0ce-49fa-9c46-8edbc02e0711",
+          "properties": ["read", "write", "notify"],
+          "encoding": "ASCII",
+          "value_type": "uuid",
+          "example": "b2d1374e-6dfc-42e5-afeb-2e9a4331aa17",
+          "purpose": "Stable device UUID. Unlike the BLE MAC, this does not rotate. Suitable as a permanent identifier across firmware and reboot cycles.",
+          "status": "observed"
+        },
+
+        "device_name": {
+          "uuid": "2e109d28-1008-4cb6-a7af-1fabb2fa3278",
+          "properties": ["read"],
+          "encoding": "UTF-8",
+          "value_type": "string",
+          "example": "Atmoph Window Yo 86637",
+          "purpose": "Device display name (mirrors the advertised name).",
+          "status": "observed"
+        },
+
+        "settings_json": {
+          "uuid": "530bcd10-f723-4203-8222-0e135022d394",
+          "properties": ["read", "write", "notify"],
+          "encoding": "UTF-8",
+          "value_type": "json",
+          "purpose": "Aggregated device settings as a single JSON blob. Fields have {min, max, value} triplets where meaningful. Writable, but no third-party write has been verified.",
+          "schema_example": {
+            "WidgetsVisible": false,
+            "DailyRoutineEnable": true,
+            "LandscapeVolumeLevel": {"min": 0, "max": 24, "value": 0},
+            "SoundscapeLayer": {"min": 0, "max": 5, "value": 0},
+            "SoundscapeVolumeLevel": {"min": 0, "max": 20, "value": 9},
+            "ScreenBrightness": {"min": 1, "max": 25, "value": 14},
+            "CurrentDecoration": {"min": 0, "max": 19, "value": 0},
+            "SoundOnly": false,
+            "LedBrightness": {"min": 0, "max": 20, "value": 0}
+          },
+          "status": "observed_read_only_verified"
+        },
+
+        "lock_state": {
+          "uuid": "596f4372-1456-4038-8bca-19ef89e6fe3e",
+          "properties": ["read", "write"],
+          "encoding": "UTF-8",
+          "value_type": "json",
+          "example": {"IsLocked": false},
+          "purpose": "Child-lock state. Writable but not verified for third-party clients.",
+          "status": "observed_read_only_verified"
+        }
+      }
+    }
+  },
+
+  "usage_patterns": {
+    "idempotent_power_on_off": {
+      "description": "Because power_toggle is a toggle rather than an explicit on/off, achieve idempotency by reading power_state first.",
+      "steps": [
+        "Read power_state characteristic.",
+        "Compare against desired state.",
+        "If already in desired state, do nothing.",
+        "Otherwise, write 'S' to command characteristic.",
+        "Optionally re-read power_state to confirm."
+      ]
+    },
+    "real_time_updates": {
+      "description": "Prefer notifications over polling. Subscribe on connect, keep the connection alive, react to change events.",
+      "characteristics_to_subscribe": [
+        "power_state",
+        "view_title",
+        "location",
+        "thumbnail_url"
+      ]
+    },
+    "waking_before_navigation": {
+      "description": "The next_view / prev_view commands appear to require the display to be on. Wake first with power_toggle if power_state is 'false', wait ~1 second, then send the nav command."
+    }
+  },
+
+  "constraints": {
+    "single_central": "BLE devices accept a single central connection. Close the official app and any other client before connecting.",
+    "mac_rotation": "Do not cache the BLE MAC address as a permanent identifier. Discover by advertised-name substring on every session, or cache the MAC only as an optimisation with a name-scan fallback.",
+    "utf8_multibyte": "Some view titles and locations contain non-ASCII UTF-8 characters (e.g. Japanese place names). Decode as UTF-8, not ASCII."
+  },
+
+  "methodology": {
+    "how_this_was_obtained": "Passive analysis of BLE traffic between the official Android Atmoph app and the device, captured using Android's built-in HCI snoop log feature. No decompilation, no firmware inspection, no authentication bypass.",
+    "reference": "See docs/communication-analysis.md in the atmoph-window-yo-ble project for the full methodology."
+  },
+
+  "provenance": {
+    "project": "atmoph-window-yo-ble",
+    "contact": "landi@athae.net",
+    "license": "MIT",
+    "affiliation": "Not affiliated with or endorsed by Atmoph Inc."
+  }
+}

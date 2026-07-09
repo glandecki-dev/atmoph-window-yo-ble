@@ -1,0 +1,164 @@
+# Atmoph Window Yo — BLE API reference
+# Machine-readable protocol description.
+# Generated from atmoph-api.json — edit that file for changes.
+
+version: "1.0.0"
+updated: "2026-07-09"
+
+device:
+  advertised_name_prefix: "Atmoph Window Yo "
+  advertised_name_pattern: '^Atmoph Window Yo (?P<serial>\d+)$'
+  notes:
+    - "BLE MAC address rotates. Discover by advertised-name substring."
+    - "No pairing or bonding required."
+    - "Single central connection at a time."
+    - "The official app writes 'C' on connect; third-party clients do not need to."
+
+services:
+  control:
+    uuid: "c1e0d952-12f7-4c84-b67d-fc26f55243a0"
+    characteristics:
+
+      command:
+        uuid: "d4393824-471f-4799-ab74-28879878a4e7"
+        properties: [write]
+        encoding: ASCII
+        purpose: >
+          General-purpose command register. Accepts variable-length ASCII strings.
+        commands:
+          power_toggle:
+            payload_ascii: "S"
+            payload_hex: "53"
+            effect: "Toggles the display power (sleep <-> wake)."
+            idempotent: false
+            note: "Always read power_state before writing for idempotent on/off."
+          next_view:
+            payload_ascii: "FW"
+            payload_hex: "46 57"
+            effect: "Advance to the next view (Forward)."
+          prev_view:
+            payload_ascii: "BW"
+            payload_hex: "42 57"
+            effect: "Go to the previous view (Backward)."
+          app_session_hello:
+            payload_ascii: "C"
+            payload_hex: "43"
+            effect: "Sent by the official app on connect. Optional for third-party clients."
+        unmapped_bytes:
+          seen: ["M", "V", "R", "T", "B"]
+          note: "Written by the official app during in-app menu navigation. Standalone effect not mapped."
+
+      power_state:
+        uuid: "7607f5a4-22bc-4730-9019-c78dc8b50341"
+        properties: [read, write, notify]
+        encoding: ASCII
+        value_type: boolean_string
+        values:
+          "on": "true"
+          "off": "false"
+        purpose: "Current display power state. Subscribe to notify for realtime updates."
+
+      view_title:
+        uuid: "1d862803-b301-4548-bece-1f1ab61881b8"
+        properties: [read, notify]
+        encoding: UTF-8
+        value_type: string
+        example: "Evening in Plaza de la Paz"
+        purpose: "Human-readable title of the currently displayed view."
+
+      location:
+        uuid: "275ddae2-4c69-4638-97d4-d5ba8e9e05d1"
+        properties: [read, notify]
+        encoding: UTF-8
+        value_type: string
+        example: "Guanajuato"
+        purpose: "Human-readable location / city name."
+
+      thumbnail_url:
+        uuid: "99cd2547-0640-485c-9996-e0a2b384a6f2"
+        properties: [read, notify]
+        encoding: UTF-8
+        value_type: url
+        example: "https://atmoph.com/thumbnails/LAT1_N1W2C3FL/fb7a2c47"
+        purpose: "HTTPS URL to the current view's thumbnail image."
+
+      view_id_full:
+        uuid: "03cffbfe-b23a-4c8f-bf57-9591b4d59119"
+        properties: [read, notify]
+        encoding: ASCII
+        value_type: string
+        example: "LAT1_N1W2C3FL/fb7a2c47"
+        purpose: "Internal view identifier with hash suffix."
+
+      view_id_bare:
+        uuid: "e9c45eb5-fa81-4760-9b1b-24d6cb1d562c"
+        properties: [read, write, notify]
+        encoding: ASCII
+        value_type: string
+        example: "LAT1_N1W2C3FL"
+        purpose: "Bare internal view identifier. May be writable to select a view directly (unverified)."
+
+      device_uuid:
+        uuid: "e6f3269f-a0ce-49fa-9c46-8edbc02e0711"
+        properties: [read, write, notify]
+        encoding: ASCII
+        value_type: uuid
+        example: "b2d1374e-6dfc-42e5-afeb-2e9a4331aa17"
+        purpose: "Stable device UUID. Does not rotate."
+
+      device_name:
+        uuid: "2e109d28-1008-4cb6-a7af-1fabb2fa3278"
+        properties: [read]
+        encoding: UTF-8
+        example: "Atmoph Window Yo 86637"
+
+      settings_json:
+        uuid: "530bcd10-f723-4203-8222-0e135022d394"
+        properties: [read, write, notify]
+        encoding: UTF-8
+        value_type: json
+        purpose: "Aggregated device settings as one JSON blob (writable but unverified)."
+        schema_example:
+          WidgetsVisible: false
+          DailyRoutineEnable: true
+          LandscapeVolumeLevel: {min: 0, max: 24, value: 0}
+          SoundscapeLayer:      {min: 0, max: 5,  value: 0}
+          SoundscapeVolumeLevel: {min: 0, max: 20, value: 9}
+          ScreenBrightness:     {min: 1, max: 25, value: 14}
+          CurrentDecoration:    {min: 0, max: 19, value: 0}
+          SoundOnly: false
+          LedBrightness:        {min: 0, max: 20, value: 0}
+
+      lock_state:
+        uuid: "596f4372-1456-4038-8bca-19ef89e6fe3e"
+        properties: [read, write]
+        encoding: UTF-8
+        value_type: json
+        example: {IsLocked: false}
+        purpose: "Child-lock state."
+
+usage_patterns:
+  idempotent_power_on_off:
+    - "Read power_state."
+    - "If already in desired state, stop."
+    - "Otherwise write 'S' to command."
+    - "Optionally re-read power_state to confirm."
+
+  real_time_updates:
+    - "Prefer notifications over polling."
+    - "Subscribe to: power_state, view_title, location, thumbnail_url."
+
+  waking_before_navigation:
+    - "Nav commands may require the display to be on."
+    - "If power_state is 'false', send 'S' to wake, wait ~1s, then send nav."
+
+constraints:
+  single_central: "Close the official app before connecting from another client."
+  mac_rotation: "Do not cache the BLE MAC as a permanent ID. Discover by name."
+  utf8_multibyte: "Decode view titles / locations as UTF-8, not ASCII."
+
+provenance:
+  project: "atmoph-window-yo-ble"
+  contact: "landi@athae.net"
+  license: "MIT"
+  affiliation: "Not affiliated with or endorsed by Atmoph Inc."
